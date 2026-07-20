@@ -81,5 +81,5 @@ function initDatabase() {
 // Export the database connection and initialization function
 module.exports = {
     db,
-    initDatabase  // <-- MAKE SURE THIS IS HERE
+    initDatabase
 };

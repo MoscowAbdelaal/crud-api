@@ -103,6 +103,8 @@ async function runAllTests() {
         if (!response.body.id) throw new Error('Response should have an id');
         if (response.body.title !== newTask.title) throw new Error(`Expected title "${newTask.title}", got "${response.body.title}"`);
         if (response.body.done !== 0) throw new Error(`Expected done: 0, got ${response.body.done}`);
+        if (!response.body.created_at) throw new Error('Response should have created_at timestamp');
+        if (!response.body.updated_at) throw new Error('Response should have updated_at timestamp');
         taskId = response.body.id;
         console.log(`   ✅ Created task with ID: ${taskId}`);
     });
@@ -114,6 +116,8 @@ async function runAllTests() {
         if (response.statusCode !== 200) throw new Error(`Expected 200, got ${response.statusCode}`);
         if (response.body.id !== taskId) throw new Error(`Expected id ${taskId}, got ${response.body.id}`);
         if (response.body.title !== 'Test Task from API Test') throw new Error('Task title does not match');
+        if (!response.body.created_at) throw new Error('Response should have created_at timestamp');
+        if (!response.body.updated_at) throw new Error('Response should have updated_at timestamp');
     });
 
     // Test 5: Update task
@@ -124,6 +128,7 @@ async function runAllTests() {
         if (response.statusCode !== 200) throw new Error(`Expected 200, got ${response.statusCode}`);
         if (response.body.title !== updateData.title) throw new Error(`Expected title "${updateData.title}", got "${response.body.title}"`);
         if (response.body.done !== 1) throw new Error(`Expected done: 1, got ${response.body.done}`);
+        if (!response.body.updated_at) throw new Error('Response should have updated_at timestamp');
     });
 
     // Test 6: Get all tasks again (should include our new task)

@@ -35,6 +35,7 @@ app.get('/tasks', (req, res) => {
         const tasks = stmt.all();
         res.json(tasks);
     } catch (error) {
+        console.error('Error in GET /tasks:', error.message);
         res.status(500).json({ error: 'Database error' });
     }
 });
@@ -52,6 +53,7 @@ app.get('/tasks/:id', (req, res) => {
         
         res.json(task);
     } catch (error) {
+        console.error('Error in GET /tasks/:id:', error.message);
         res.status(500).json({ error: 'Database error' });
     }
 });
@@ -78,6 +80,7 @@ app.post('/tasks', (req, res) => {
         
         res.status(201).json(newTask);
     } catch (error) {
+        console.error('Error in POST /tasks:', error.message);
         res.status(500).json({ error: 'Database error' });
     }
 });
@@ -133,6 +136,7 @@ app.put('/tasks/:id', (req, res) => {
         
         res.json(updatedTask);
     } catch (error) {
+        console.error('Error in PUT /tasks/:id:', error.message);
         res.status(500).json({ error: 'Database error' });
     }
 });
@@ -155,6 +159,7 @@ app.delete('/tasks/:id', (req, res) => {
         
         res.status(204).send();
     } catch (error) {
+        console.error('Error in DELETE /tasks/:id:', error.message);
         res.status(500).json({ error: 'Database error' });
     }
 });
@@ -176,6 +181,7 @@ app.get('/tasks/search', (req, res) => {
         const tasks = stmt.all(`%${searchTerm.trim()}%`);
         res.json(tasks);
     } catch (error) {
+        console.error('Error in GET /tasks/search:', error.message);
         res.status(500).json({ error: 'Database error' });
     }
 });
@@ -194,6 +200,7 @@ app.get('/tasks/filter', (req, res) => {
         const tasks = stmt.all(doneValue);
         res.json(tasks);
     } catch (error) {
+        console.error('Error in GET /tasks/filter:', error.message);
         res.status(500).json({ error: 'Database error' });
     }
 });
@@ -226,6 +233,7 @@ app.get('/stats', (req, res) => {
             newest_task: newest || null
         });
     } catch (error) {
+        console.error('Error in GET /stats:', error.message);
         res.status(500).json({ error: 'Database error' });
     }
 });
@@ -238,6 +246,7 @@ app.get('/tasks/recent', (req, res) => {
         const tasks = stmt.all(limit);
         res.json(tasks);
     } catch (error) {
+        console.error('Error in GET /tasks/recent:', error.message);
         res.status(500).json({ error: 'Database error' });
     }
 });
@@ -260,7 +269,10 @@ app.delete('/tasks/clear', (req, res) => {
         db.exec('DELETE FROM sqlite_sequence WHERE name="tasks"');
         
         // Re-seed the tasks
-        const insertStmt = db.prepare('INSERT INTO tasks (title, done, created_at, updated_at) VALUES (?, ?, datetime("now"), datetime("now"))');
+        const insertStmt = db.prepare(`
+            INSERT INTO tasks (title, done, created_at, updated_at) 
+            VALUES (?, ?, datetime("now"), datetime("now"))
+        `);
         const exampleTasks = [
             ['Learn SQLite basics', 0],
             ['Build a CRUD API', 0],
@@ -273,6 +285,7 @@ app.delete('/tasks/clear', (req, res) => {
         
         res.json({ message: 'All tasks deleted and reseeded with example tasks!' });
     } catch (error) {
+        console.error('Error in DELETE /tasks/clear:', error.message);
         res.status(500).json({ error: 'Database error' });
     }
 });
