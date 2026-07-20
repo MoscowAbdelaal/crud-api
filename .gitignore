@@ -1,5 +1,5 @@
-echo "node_modules/" > .gitignore
-echo "tasks.db" >> .gitignore
-echo "tasks.sqlbpro" >> .gitignore
-echo ".DS_Store" >> .gitignore
-echo "*.log" >> .gitignore
+node_modules/
+tasks.db
+tasks.sqlbpro
+.DS_Store
+*.log
