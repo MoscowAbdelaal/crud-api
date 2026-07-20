@@ -30,6 +30,17 @@ SQLite was chosen because:
 ## Setup
 
 ### 1. Clone the repository
-```bash
+bash
 git clone https://github.com/MoscowAbdelaal/crud-api.git
 cd crud-api
+
+## Running Tests
+
+To run the automated test suite:
+
+bash
+# Make sure the server is running
+node server.js
+
+# In another terminal, run the tests
+node test-api.js
