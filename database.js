@@ -10,11 +10,28 @@ function createTable() {
         CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
-            done INTEGER DEFAULT 0
+            done INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `;
     db.exec(createTableSQL);
     console.log('✅ Tasks table ready!');
+    
+    // Try to add columns if they don't exist (for existing databases)
+    try {
+        db.exec('ALTER TABLE tasks ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP');
+        console.log('✅ Added created_at column');
+    } catch (e) {
+        // Column already exists, that's fine
+    }
+    
+    try {
+        db.exec('ALTER TABLE tasks ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP');
+        console.log('✅ Added updated_at column');
+    } catch (e) {
+        // Column already exists, that's fine
+    }
 }
 
 // Seed example tasks only if the table is empty
@@ -29,8 +46,11 @@ function seedTasks() {
         return;
     }
     
-    // Insert 3 example tasks
-    const insertStmt = db.prepare('INSERT INTO tasks (title, done) VALUES (?, ?)');
+    // Insert 3 example tasks with timestamps
+    const insertStmt = db.prepare(`
+        INSERT INTO tasks (title, done, created_at, updated_at) 
+        VALUES (?, ?, datetime('now'), datetime('now'))
+    `);
     
     const exampleTasks = [
         ['Learn SQLite basics', 0],
@@ -42,7 +62,7 @@ function seedTasks() {
         insertStmt.run(title, done);
     }
     
-    console.log('🌱 Seeded 3 example tasks!');
+    console.log('🌱 Seeded 3 example tasks with timestamps!');
 }
 
 // Initialize the database
@@ -61,5 +81,5 @@ function initDatabase() {
 // Export the database connection and initialization function
 module.exports = {
     db,
-    initDatabase
+    initDatabase  // <-- MAKE SURE THIS IS HERE
 };
