@@ -1,6 +1,14 @@
+// Load environment variables
+require('dotenv').config({ path: '.env.local' });
+require('dotenv').config(); // Fallback to .env for Docker
+
+// If no DATABASE_URL is set, use localhost for local development
+if (!process.env.DATABASE_URL) {
+    process.env.DATABASE_URL = 'postgres://postgres:dev@localhost:5432/tasks';
+}
+
 const express = require('express');
 const { initDatabase, getAllTasks, getTaskById, createTask, updateTask, deleteTask } = require('./database-pg');
-require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -8,10 +16,13 @@ const PORT = process.env.PORT || 3000;
 // Middleware to parse JSON
 app.use(express.json());
 
-// Initialize the database
+// ============================================
+// DATABASE INITIALIZATION
+// ============================================
+
 let dbInitialized = false;
 
-app.use(async (req, res, next) => {
+async function initializeDB() {
     if (!dbInitialized) {
         try {
             await initDatabase();
@@ -19,16 +30,16 @@ app.use(async (req, res, next) => {
             console.log('✅ Database ready!');
         } catch (error) {
             console.error('❌ Database initialization failed:', error.message);
-            return res.status(500).json({ error: 'Database connection failed' });
+            process.exit(1);
         }
     }
-    next();
-});
+}
 
 // ============================================
 // HEALTH CHECK ENDPOINT
 // ============================================
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+    await initializeDB();
     res.json({ status: 'ok' });
 });
 
@@ -39,6 +50,7 @@ app.get('/health', (req, res) => {
 // GET /tasks - Get all tasks with optional sorting
 app.get('/tasks', async (req, res) => {
     try {
+        await initializeDB();
         const sort = req.query.sort || 'id';
         const validSortFields = ['id', 'title', 'done', 'created_at', 'updated_at'];
         
@@ -57,6 +69,7 @@ app.get('/tasks', async (req, res) => {
 // GET /tasks/:id - Get a single task by ID
 app.get('/tasks/:id', async (req, res) => {
     try {
+        await initializeDB();
         const id = parseInt(req.params.id);
         const task = await getTaskById(id);
         
@@ -74,9 +87,9 @@ app.get('/tasks/:id', async (req, res) => {
 // POST /tasks - Create a new task
 app.post('/tasks', async (req, res) => {
     try {
+        await initializeDB();
         const { title } = req.body;
         
-        // Validation: title is required and cannot be empty
         if (!title || title.trim() === '') {
             return res.status(400).json({ error: 'Title is required' });
         }
@@ -92,10 +105,10 @@ app.post('/tasks', async (req, res) => {
 // PUT /tasks/:id - Update an existing task
 app.put('/tasks/:id', async (req, res) => {
     try {
+        await initializeDB();
         const id = parseInt(req.params.id);
         const { title, done } = req.body;
         
-        // Validation: title cannot be empty
         if (title !== undefined && title.trim() === '') {
             return res.status(400).json({ error: 'Title cannot be empty' });
         }
@@ -116,6 +129,7 @@ app.put('/tasks/:id', async (req, res) => {
 // DELETE /tasks/:id - Delete a task
 app.delete('/tasks/:id', async (req, res) => {
     try {
+        await initializeDB();
         const id = parseInt(req.params.id);
         const deleted = await deleteTask(id);
         
@@ -137,6 +151,7 @@ app.delete('/tasks/:id', async (req, res) => {
 // GET /tasks/search?q=keyword - Search tasks by title
 app.get('/tasks/search', async (req, res) => {
     try {
+        await initializeDB();
         const searchTerm = req.query.q;
         
         if (!searchTerm || searchTerm.trim() === '') {
@@ -158,6 +173,7 @@ app.get('/tasks/search', async (req, res) => {
 // GET /tasks/filter?done=true - Filter by completion status
 app.get('/tasks/filter', async (req, res) => {
     try {
+        await initializeDB();
         const done = req.query.done;
         
         if (done === undefined) {
@@ -180,6 +196,7 @@ app.get('/tasks/filter', async (req, res) => {
 // GET /stats - Get task statistics
 app.get('/stats', async (req, res) => {
     try {
+        await initializeDB();
         const { pool } = require('./database-pg');
         const totalResult = await pool.query('SELECT COUNT(*) as total FROM tasks');
         const doneResult = await pool.query('SELECT COUNT(*) as done FROM tasks WHERE done = true');
@@ -209,6 +226,7 @@ app.get('/stats', async (req, res) => {
 // GET /tasks/recent - Get recently added tasks
 app.get('/tasks/recent', async (req, res) => {
     try {
+        await initializeDB();
         const limit = parseInt(req.query.limit) || 5;
         const { pool } = require('./database-pg');
         const result = await pool.query(
@@ -225,6 +243,7 @@ app.get('/tasks/recent', async (req, res) => {
 // DELETE /tasks/clear - Delete all tasks (warning: destructive!)
 app.delete('/tasks/clear', async (req, res) => {
     try {
+        await initializeDB();
         const confirm = req.query.confirm;
         
         if (confirm !== 'yes') {
@@ -262,7 +281,9 @@ app.delete('/tasks/clear', async (req, res) => {
 // ============================================
 // START THE SERVER
 // ============================================
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+    // Initialize database before server starts
+    await initializeDB();
     console.log(`🚀 Server running at http://localhost:${PORT}`);
     console.log(`\n📋 TASKS API:`);
     console.log(`  GET    /tasks                    - Get all tasks (add ?sort=title to sort)`);

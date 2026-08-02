@@ -1,5 +1,17 @@
+# Environment variables (never commit!)
+.env
+.env.local
+
+# Dependencies
 node_modules/
-tasks.db
-tasks.sqlbpro
+
+# Database files
+*.db
+*.sqlite
+
+# OS files
 .DS_Store
 *.log
+
+# Docker
+*.pid
