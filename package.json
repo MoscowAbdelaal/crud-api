@@ -1,27 +1,41 @@
 {
-  "dependencies": {
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "pg": "^8.22.0"
-  },
   "name": "assignment-2---my-crud-api",
   "version": "1.0.0",
-  "description": "",
-  "main": "server.js",
+  "description": "CRUD API with SQLite, PostgreSQL, Docker, and Supabase Auth",
+  "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
+    "test": "node tests/test-api.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.1",
+    "better-sqlite3": "^13.0.3",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "pg": "^8.22.0",
+    "swagger-ui-express": "^5.0.1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YOUR_USERNAME/crud-api.git"
+    "url": "git+https://github.com/MoscowAbdelaal/crud-api.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "crud",
+    "api",
+    "express",
+    "sqlite",
+    "postgresql",
+    "docker",
+    "supabase",
+    "auth",
+    "jwt"
+  ],
+  "author": "Moscow Abdelaal",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/YOUR_USERNAME/crud-api/issues"
+    "url": "https://github.com/MoscowAbdelaal/crud-api/issues"
   },
-  "homepage": "https://github.com/YOUR_USERNAME/crud-api#readme"
+  "homepage": "https://github.com/MoscowAbdelaal/crud-api#readme"
 }
