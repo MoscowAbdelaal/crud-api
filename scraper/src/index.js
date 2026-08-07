@@ -5,6 +5,7 @@ const { validateRecord } = require('./validate');
 const cheerio = require('cheerio');
 const fs = require('fs');
 const path = require('path');
+const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 
 const BASE_URL = 'https://books.toscrape.com';
 const CATALOGUE_URL = `${BASE_URL}/catalogue/page-1.html`;
@@ -91,7 +92,6 @@ async function main() {
         
         const uniqueLinks = [...new Set(allBookLinks)];
         
-        // FAKE URL TO TEST FAILURE HANDLING (Stage 5)
         const fakeUrl = 'https://books.toscrape.com/catalogue/this-page-does-not-exist.html';
         const testLinks = [...uniqueLinks, fakeUrl];
         
@@ -143,6 +143,25 @@ async function main() {
         fs.writeFileSync(path.join(OUTPUT_DIR, 'books.json'), JSON.stringify(validRecords, null, 2));
         fs.writeFileSync(path.join(OUTPUT_DIR, 'errors.json'), JSON.stringify(errors, null, 2));
         
+        // ============================================
+        // BONUS 1: CSV EXPORT
+        // ============================================
+        if (validRecords.length > 0) {
+            const csvWriter = createCsvWriter({
+                path: path.join(OUTPUT_DIR, 'books.csv'),
+                header: [
+                    { id: 'title', title: 'Title' },
+                    { id: 'product_url', title: 'URL' },
+                    { id: 'price_gbp', title: 'Price (GBP)' },
+                    { id: 'rating_number', title: 'Rating' },
+                    { id: 'availability_count', title: 'Stock' },
+                    { id: 'description', title: 'Description' }
+                ]
+            });
+            await csvWriter.writeRecords(validRecords);
+            console.log(`📁 CSV saved: books.csv (${validRecords.length} records)`);
+        }
+        
         const duration = (Date.now() - startTime) / 1000;
         const report = {
             start_time: new Date(startTime).toISOString(),
@@ -167,6 +186,7 @@ async function main() {
         console.log(`   books.json: ${validRecords.length} records`);
         console.log(`   errors.json: ${errors.length} errors`);
         console.log(`   run-report.json: ${Object.keys(report).length} metrics`);
+        console.log(`   books.csv: ${validRecords.length} records (Bonus 1)`);
         
     } catch (error) {
         console.error('❌ Scraping failed:', error.message);
