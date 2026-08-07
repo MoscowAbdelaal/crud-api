@@ -1,4 +1,4 @@
-const { fetchWithCache } = require('./fetch');
+const { fetchWithCache, fetchWithRetry } = require('./fetch');
 const { parseBookPage } = require('./parse');
 const { cleanRecord } = require('./clean');
 const { validateRecord } = require('./validate');
@@ -23,7 +23,7 @@ async function getCataloguePages() {
     
     while (currentUrl && catalogueUrls.length < 3) {
         const cacheKey = `catalogue-page-${catalogueUrls.length + 1}`;
-        const html = await fetchWithCache(currentUrl, cacheKey);
+        const html = await fetchWithRetry(currentUrl, cacheKey);
         
         if (!html) break;
         
@@ -84,7 +84,7 @@ async function main() {
         const allBookLinks = [];
         for (const url of catalogueUrls) {
             const cacheKey = `catalogue-page-${catalogueUrls.indexOf(url) + 1}`;
-            const html = await fetchWithCache(url, cacheKey);
+            const html = await fetchWithRetry(url, cacheKey);
             if (html) {
                 const links = await getBookLinks(html, url);
                 allBookLinks.push(...links);
@@ -104,7 +104,7 @@ async function main() {
             const cacheKey = `book-${i + 1}`;
             
             try {
-                const html = await fetchWithCache(url, cacheKey);
+                const html = await fetchWithRetry(url, cacheKey);
                 if (!html) {
                     errors.push({ url, error: 'No HTML received' });
                     console.error(`❌ [${i + 1}/${testLinks.length}] No HTML: ${url}`);
@@ -141,9 +141,7 @@ async function main() {
             }
         }
         
-        // ============================================
-        // BONUS 2: CHANGE DETECTION
-        // ============================================
+        // Change Detection (Bonus 2)
         const oldPath = path.join(OUTPUT_DIR, 'books.json');
         let oldRecords = [];
         if (fs.existsSync(oldPath)) {
@@ -164,9 +162,7 @@ async function main() {
         fs.writeFileSync(path.join(OUTPUT_DIR, 'books.json'), JSON.stringify(validRecords, null, 2));
         fs.writeFileSync(path.join(OUTPUT_DIR, 'errors.json'), JSON.stringify(errors, null, 2));
         
-        // ============================================
-        // BONUS 1: CSV EXPORT
-        // ============================================
+        // CSV Export (Bonus 1)
         if (validRecords.length > 0) {
             const csvWriter = createCsvWriter({
                 path: path.join(OUTPUT_DIR, 'books.csv'),

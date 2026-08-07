@@ -4,18 +4,15 @@ const path = require('path');
 
 const CACHE_DIR = path.join(__dirname, '../cache');
 
-// Ensure cache directory exists
 if (!fs.existsSync(CACHE_DIR)) {
     fs.mkdirSync(CACHE_DIR, { recursive: true });
 }
 
-// Polite user-agent
 const USER_AGENT = 'FlyRankInternship-A9/1.0 (+https://github.com/MoscowAbdelaal/crud-api)';
 
 async function fetchWithCache(url, cacheKey) {
     const cachePath = path.join(CACHE_DIR, `${cacheKey}.html`);
     
-    // Check cache first
     if (fs.existsSync(cachePath)) {
         const content = fs.readFileSync(cachePath, 'utf-8');
         console.log(`📁 CACHE HIT: ${cacheKey} (${content.length} bytes)`);
@@ -47,9 +44,40 @@ async function fetchWithCache(url, cacheKey) {
         } else {
             console.error(`❌ ERROR: ${error.message}`);
         }
-        // Return null instead of throwing
         return null;
     }
 }
 
-module.exports = { fetchWithCache };
+// ============================================
+// BONUS 4: RETRY LOGIC WITH EXPONENTIAL BACKOFF
+// ============================================
+
+async function fetchWithRetry(url, cacheKey, maxRetries = 3) {
+    let lastError = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const result = await fetchWithCache(url, cacheKey);
+            if (result) return result;
+            
+            // If fetchWithCache returned null, treat as failure
+            if (attempt < maxRetries) {
+                const delay = Math.min(1000 * Math.pow(2, attempt - 1) + Math.random() * 200, 10000);
+                console.log(`⏳ Retry ${attempt}/${maxRetries} after ${Math.round(delay)}ms`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        } catch (error) {
+            lastError = error;
+            if (attempt < maxRetries) {
+                const delay = Math.min(1000 * Math.pow(2, attempt - 1) + Math.random() * 200, 10000);
+                console.log(`⏳ Retry ${attempt}/${maxRetries} after ${Math.round(delay)}ms (${error.message})`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+    }
+    
+    console.error(`❌ Failed after ${maxRetries} attempts: ${url}`);
+    return null;
+}
+
+module.exports = { fetchWithCache, fetchWithRetry };
