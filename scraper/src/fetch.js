@@ -27,14 +27,18 @@ async function fetchWithCache(url, cacheKey) {
     try {
         const response = await axios.get(url, {
             headers: { 'User-Agent': USER_AGENT },
-            timeout: 10000, // 10 seconds
+            timeout: 10000,
             validateStatus: (status) => status === 200
         });
         
-        // Save to cache
+        if (!response.data) {
+            throw new Error('No data received');
+        }
+        
         fs.writeFileSync(cachePath, response.data);
         console.log(`💾 CACHE SAVED: ${cacheKey} (${response.data.length} bytes)`);
         return response.data;
+        
     } catch (error) {
         if (error.response) {
             console.error(`❌ HTTP ${error.response.status}: ${url}`);
@@ -43,7 +47,8 @@ async function fetchWithCache(url, cacheKey) {
         } else {
             console.error(`❌ ERROR: ${error.message}`);
         }
-        throw error;
+        // Return null instead of throwing
+        return null;
     }
 }
 
