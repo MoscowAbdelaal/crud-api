@@ -1,19 +1,20 @@
 {
   "name": "scraper",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Polite web scraper for Books to Scrape",
+  "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/index.js",
+    "dashboard": "node server.js",
+    "dev": "node src/index.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0",
+    "csv-writer": "^1.6.0",
+    "zod": "^3.22.0"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "dependencies": {
-    "axios": "^1.19.0",
-    "cheerio": "^1.2.0",
-    "csv-writer": "^1.6.0",
-    "zod": "^4.4.3"
-  }
+  "author": "Moscow Abdelaal",
+  "license": "ISC"
 }
