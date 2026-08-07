@@ -1,5 +1,7 @@
 const { fetchWithCache } = require('./fetch');
 const { parseBookPage } = require('./parse');
+const { cleanRecord } = require('./clean');
+const { validateRecord } = require('./validate');
 const cheerio = require('cheerio');
 const fs = require('fs');
 const path = require('path');
@@ -69,7 +71,9 @@ async function getBookLinks(html, pageUrl) {
 async function main() {
     console.log('📚 Books to Scrape - Polite Scraper\n');
     const startTime = Date.now();
-    const records = [];
+    const rawRecords = [];
+    const validRecords = [];
+    const errors = [];
     
     try {
         const catalogueUrls = await getCataloguePages();
@@ -94,13 +98,34 @@ async function main() {
             
             try {
                 const html = await fetchWithCache(url, cacheKey);
-                if (html) {
-                    const record = parseBookPage(html, url);
-                    records.push(record);
-                    console.log(`✅ [${i + 1}/${uniqueLinks.length}] ${record.title || 'Unknown title'}`);
+                if (!html) {
+                    errors.push({ url, error: 'No HTML received' });
+                    continue;
+                }
+                
+                const raw = parseBookPage(html, url);
+                rawRecords.push(raw);
+                
+                const cleaned = cleanRecord(raw);
+                const result = validateRecord(cleaned);
+                
+                if (result.valid) {
+                    validRecords.push(result.data);
+                    console.log(`✅ [${i + 1}/${uniqueLinks.length}] ${raw.title || 'Unknown title'}`);
+                } else {
+                    errors.push({
+                        url,
+                        errors: result.errors,
+                        record: cleaned
+                    });
+                    console.log(`⚠️ [${i + 1}/${uniqueLinks.length}] ${raw.title || 'Unknown title'} - INVALID`);
                 }
             } catch (error) {
-                console.error(`❌ Failed to fetch book ${i + 1}: ${url}`);
+                errors.push({
+                    url,
+                    error: error.message
+                });
+                console.error(`❌ [${i + 1}/${uniqueLinks.length}] Failed: ${url}`);
             }
             
             if (i < uniqueLinks.length - 1) {
@@ -108,16 +133,33 @@ async function main() {
             }
         }
         
-        const outputPath = path.join(OUTPUT_DIR, 'books-raw.json');
-        fs.writeFileSync(outputPath, JSON.stringify(records, null, 2));
+        fs.writeFileSync(path.join(OUTPUT_DIR, 'books.json'), JSON.stringify(validRecords, null, 2));
+        fs.writeFileSync(path.join(OUTPUT_DIR, 'errors.json'), JSON.stringify(errors, null, 2));
         
         const duration = (Date.now() - startTime) / 1000;
-        console.log(`\n📊 Summary:`);
+        const report = {
+            start_time: new Date(startTime).toISOString(),
+            duration_seconds: duration,
+            catalogue_pages: catalogueUrls.length,
+            book_urls_found: uniqueLinks.length,
+            valid_records: validRecords.length,
+            invalid_records: errors.filter(e => e.record).length,
+            failed_pages: errors.filter(e => e.error).length,
+            cache_used: true
+        };
+        fs.writeFileSync(path.join(OUTPUT_DIR, 'run-report.json'), JSON.stringify(report, null, 2));
+        
+        console.log(`\n📊 SUMMARY:`);
         console.log(`   Catalogue pages: ${catalogueUrls.length}`);
-        console.log(`   Book links found: ${uniqueLinks.length}`);
-        console.log(`   Records extracted: ${records.length}`);
+        console.log(`   Book URLs found: ${uniqueLinks.length}`);
+        console.log(`   Valid records: ${validRecords.length}`);
+        console.log(`   Invalid records: ${report.invalid_records}`);
+        console.log(`   Failed pages: ${report.failed_pages}`);
         console.log(`   Duration: ${duration}s`);
-        console.log(`\n📁 Output saved to: ${outputPath}`);
+        console.log(`\n📁 Outputs:`);
+        console.log(`   books.json: ${validRecords.length} records`);
+        console.log(`   errors.json: ${errors.length} errors`);
+        console.log(`   run-report.json: ${Object.keys(report).length} metrics`);
         
     } catch (error) {
         console.error('❌ Scraping failed:', error.message);
