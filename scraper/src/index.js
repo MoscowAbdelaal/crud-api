@@ -90,16 +90,23 @@ async function main() {
         }
         
         const uniqueLinks = [...new Set(allBookLinks)];
-        console.log(`📖 Discovered ${allBookLinks.length} book links, ${uniqueLinks.length} unique\n`);
         
-        for (let i = 0; i < uniqueLinks.length; i++) {
-            const url = uniqueLinks[i];
+        // FAKE URL TO TEST FAILURE HANDLING (Stage 5)
+        const fakeUrl = 'https://books.toscrape.com/catalogue/this-page-does-not-exist.html';
+        const testLinks = [...uniqueLinks, fakeUrl];
+        
+        console.log(`📖 Discovered ${uniqueLinks.length} unique book links`);
+        console.log(`🧪 Testing with ${testLinks.length} links (including 1 fake URL)\n`);
+        
+        for (let i = 0; i < testLinks.length; i++) {
+            const url = testLinks[i];
             const cacheKey = `book-${i + 1}`;
             
             try {
                 const html = await fetchWithCache(url, cacheKey);
                 if (!html) {
                     errors.push({ url, error: 'No HTML received' });
+                    console.error(`❌ [${i + 1}/${testLinks.length}] No HTML: ${url}`);
                     continue;
                 }
                 
@@ -111,24 +118,24 @@ async function main() {
                 
                 if (result.valid) {
                     validRecords.push(result.data);
-                    console.log(`✅ [${i + 1}/${uniqueLinks.length}] ${raw.title || 'Unknown title'}`);
+                    console.log(`✅ [${i + 1}/${testLinks.length}] ${raw.title || 'Unknown title'}`);
                 } else {
                     errors.push({
                         url,
                         errors: result.errors,
                         record: cleaned
                     });
-                    console.log(`⚠️ [${i + 1}/${uniqueLinks.length}] ${raw.title || 'Unknown title'} - INVALID`);
+                    console.log(`⚠️ [${i + 1}/${testLinks.length}] ${raw.title || 'Unknown title'} - INVALID`);
                 }
             } catch (error) {
                 errors.push({
                     url,
                     error: error.message
                 });
-                console.error(`❌ [${i + 1}/${uniqueLinks.length}] Failed: ${url}`);
+                console.error(`❌ [${i + 1}/${testLinks.length}] Failed: ${url}`);
             }
             
-            if (i < uniqueLinks.length - 1) {
+            if (i < testLinks.length - 1) {
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
         }
