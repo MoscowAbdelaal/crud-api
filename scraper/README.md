@@ -77,7 +77,7 @@ node src/index.js
   "book_urls_found": 60,
   "valid_records": 60,
   "invalid_records": 0,
-  "failed_pages": 0,
+  "failed_pages": 1,
   "cache_used": true
 }
 ```
