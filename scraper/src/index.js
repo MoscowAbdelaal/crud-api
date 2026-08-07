@@ -2,6 +2,7 @@ const { fetchWithCache } = require('./fetch');
 const { parseBookPage } = require('./parse');
 const { cleanRecord } = require('./clean');
 const { validateRecord } = require('./validate');
+const { detectChanges } = require('./hash');
 const cheerio = require('cheerio');
 const fs = require('fs');
 const path = require('path');
@@ -140,6 +141,26 @@ async function main() {
             }
         }
         
+        // ============================================
+        // BONUS 2: CHANGE DETECTION
+        // ============================================
+        const oldPath = path.join(OUTPUT_DIR, 'books.json');
+        let oldRecords = [];
+        if (fs.existsSync(oldPath)) {
+            try {
+                oldRecords = JSON.parse(fs.readFileSync(oldPath, 'utf-8'));
+            } catch (e) {
+                oldRecords = [];
+            }
+        }
+        
+        const changes = detectChanges(oldRecords, validRecords);
+        console.log(`\n📊 Change Detection:`);
+        console.log(`   New: ${changes.new}`);
+        console.log(`   Changed: ${changes.changed}`);
+        console.log(`   Unchanged: ${changes.unchanged}`);
+        console.log(`   Gone: ${changes.gone}`);
+        
         fs.writeFileSync(path.join(OUTPUT_DIR, 'books.json'), JSON.stringify(validRecords, null, 2));
         fs.writeFileSync(path.join(OUTPUT_DIR, 'errors.json'), JSON.stringify(errors, null, 2));
         
@@ -171,7 +192,8 @@ async function main() {
             valid_records: validRecords.length,
             invalid_records: errors.filter(e => e.record).length,
             failed_pages: errors.filter(e => e.error).length,
-            cache_used: true
+            cache_used: true,
+            changes: changes
         };
         fs.writeFileSync(path.join(OUTPUT_DIR, 'run-report.json'), JSON.stringify(report, null, 2));
         
