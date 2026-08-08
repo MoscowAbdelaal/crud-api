@@ -17,6 +17,26 @@ if (!fs.existsSync(OUTPUT_DIR)) {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 }
 
+// ============================================
+// AUTO-GENERATE DASHBOARD
+// ============================================
+function generateDashboard(books) {
+    const templatePath = path.join(__dirname, 'dashboard-template.html');
+    const dashboardPath = path.join(__dirname, 'dashboard.html');
+
+    if (!fs.existsSync(templatePath)) {
+        console.log('⚠️ dashboard-template.html not found, skipping dashboard generation');
+        return;
+    }
+
+    let html = fs.readFileSync(templatePath, 'utf-8');
+    const dataScript = `<script>\n    const EMBEDDED_DATA = ${JSON.stringify(books, null, 2)};\n</script>`;
+    html = html.replace('<!-- DATA_PLACEHOLDER -->', dataScript);
+
+    fs.writeFileSync(dashboardPath, html);
+    console.log(`📁 Dashboard auto-generated with ${books.length} books`);
+}
+
 async function getCataloguePages() {
     const catalogueUrls = [];
     let currentUrl = CATALOGUE_URL;
@@ -165,7 +185,6 @@ async function main() {
                 });
                 console.log(`❌ [${i + 1}/${validRecords.length}] ${record.title} → AI Error`);
             }
-            // Rate limit AI calls (optional)
             if (i < validRecords.length - 1) {
                 await new Promise(resolve => setTimeout(resolve, 200));
             }
@@ -197,6 +216,11 @@ async function main() {
         fs.writeFileSync(path.join(OUTPUT_DIR, 'books.json'), JSON.stringify(validRecords, null, 2));
         fs.writeFileSync(path.join(OUTPUT_DIR, 'books-enriched.json'), JSON.stringify(enrichedRecords, null, 2));
         fs.writeFileSync(path.join(OUTPUT_DIR, 'errors.json'), JSON.stringify(errors, null, 2));
+        
+        // ============================================
+        // AUTO-GENERATE DASHBOARD (Bonus 3)
+        // ============================================
+        generateDashboard(validRecords);
         
         // ============================================
         // CSV EXPORT (Bonus 1)
@@ -245,6 +269,7 @@ async function main() {
         console.log(`   books.json: ${validRecords.length} records`);
         console.log(`   books-enriched.json: ${enrichedRecords.length} records`);
         console.log(`   books-enriched.csv: ${enrichedRecords.length} records`);
+        console.log(`   dashboard.html: auto-generated with ${validRecords.length} books`);
         console.log(`   errors.json: ${errors.length} errors`);
         console.log(`   run-report.json: ${Object.keys(report).length} metrics`);
         
