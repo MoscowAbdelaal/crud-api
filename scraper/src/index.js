@@ -3,6 +3,7 @@ const { parseBookPage } = require('./parse');
 const { cleanRecord } = require('./clean');
 const { validateRecord } = require('./validate');
 const { detectChanges } = require('./hash');
+const { enrichWithAI } = require('./enrich');
 const cheerio = require('cheerio');
 const fs = require('fs');
 const path = require('path');
@@ -75,6 +76,7 @@ async function main() {
     const startTime = Date.now();
     const rawRecords = [];
     const validRecords = [];
+    const enrichedRecords = [];
     const errors = [];
     
     try {
@@ -141,7 +143,37 @@ async function main() {
             }
         }
         
-        // Change Detection (Bonus 2)
+        // ============================================
+        // BONUS 5: AI ENRICHMENT
+        // ============================================
+        console.log('\n🤖 Enriching with AI...');
+        for (let i = 0; i < validRecords.length; i++) {
+            const record = validRecords[i];
+            try {
+                const enriched = await enrichWithAI(record.description, record.title);
+                enrichedRecords.push({
+                    ...record,
+                    ai_category: enriched.category,
+                    ai_summary: enriched.summary
+                });
+                console.log(`✅ [${i + 1}/${validRecords.length}] ${record.title} → ${enriched.category}`);
+            } catch (error) {
+                enrichedRecords.push({
+                    ...record,
+                    ai_category: 'Error',
+                    ai_summary: 'AI enrichment failed'
+                });
+                console.log(`❌ [${i + 1}/${validRecords.length}] ${record.title} → AI Error`);
+            }
+            // Rate limit AI calls (optional)
+            if (i < validRecords.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+        }
+        
+        // ============================================
+        // CHANGE DETECTION (Bonus 2)
+        // ============================================
         const oldPath = path.join(OUTPUT_DIR, 'books.json');
         let oldRecords = [];
         if (fs.existsSync(oldPath)) {
@@ -159,24 +191,31 @@ async function main() {
         console.log(`   Unchanged: ${changes.unchanged}`);
         console.log(`   Gone: ${changes.gone}`);
         
+        // ============================================
+        // SAVE OUTPUTS
+        // ============================================
         fs.writeFileSync(path.join(OUTPUT_DIR, 'books.json'), JSON.stringify(validRecords, null, 2));
+        fs.writeFileSync(path.join(OUTPUT_DIR, 'books-enriched.json'), JSON.stringify(enrichedRecords, null, 2));
         fs.writeFileSync(path.join(OUTPUT_DIR, 'errors.json'), JSON.stringify(errors, null, 2));
         
-        // CSV Export (Bonus 1)
-        if (validRecords.length > 0) {
+        // ============================================
+        // CSV EXPORT (Bonus 1)
+        // ============================================
+        if (enrichedRecords.length > 0) {
             const csvWriter = createCsvWriter({
-                path: path.join(OUTPUT_DIR, 'books.csv'),
+                path: path.join(OUTPUT_DIR, 'books-enriched.csv'),
                 header: [
                     { id: 'title', title: 'Title' },
                     { id: 'product_url', title: 'URL' },
                     { id: 'price_gbp', title: 'Price (GBP)' },
                     { id: 'rating_number', title: 'Rating' },
                     { id: 'availability_count', title: 'Stock' },
-                    { id: 'description', title: 'Description' }
+                    { id: 'ai_category', title: 'Category' },
+                    { id: 'ai_summary', title: 'AI Summary' }
                 ]
             });
-            await csvWriter.writeRecords(validRecords);
-            console.log(`📁 CSV saved: books.csv (${validRecords.length} records)`);
+            await csvWriter.writeRecords(enrichedRecords);
+            console.log(`📁 CSV saved: books-enriched.csv (${enrichedRecords.length} records)`);
         }
         
         const duration = (Date.now() - startTime) / 1000;
@@ -186,6 +225,7 @@ async function main() {
             catalogue_pages: catalogueUrls.length,
             book_urls_found: uniqueLinks.length,
             valid_records: validRecords.length,
+            enriched_records: enrichedRecords.length,
             invalid_records: errors.filter(e => e.record).length,
             failed_pages: errors.filter(e => e.error).length,
             cache_used: true,
@@ -197,14 +237,16 @@ async function main() {
         console.log(`   Catalogue pages: ${catalogueUrls.length}`);
         console.log(`   Book URLs found: ${uniqueLinks.length}`);
         console.log(`   Valid records: ${validRecords.length}`);
+        console.log(`   Enriched records: ${enrichedRecords.length}`);
         console.log(`   Invalid records: ${report.invalid_records}`);
         console.log(`   Failed pages: ${report.failed_pages}`);
         console.log(`   Duration: ${duration}s`);
         console.log(`\n📁 Outputs:`);
         console.log(`   books.json: ${validRecords.length} records`);
+        console.log(`   books-enriched.json: ${enrichedRecords.length} records`);
+        console.log(`   books-enriched.csv: ${enrichedRecords.length} records`);
         console.log(`   errors.json: ${errors.length} errors`);
         console.log(`   run-report.json: ${Object.keys(report).length} metrics`);
-        console.log(`   books.csv: ${validRecords.length} records (Bonus 1)`);
         
     } catch (error) {
         console.error('❌ Scraping failed:', error.message);
