@@ -21,18 +21,125 @@ if (!fs.existsSync(OUTPUT_DIR)) {
 // AUTO-GENERATE DASHBOARD
 // ============================================
 function generateDashboard(books) {
-    const templatePath = path.join(__dirname, 'dashboard-template.html');
-    const dashboardPath = path.join(__dirname, 'dashboard.html');
+    const templatePath = '/Users/moscow/FlyRank/Assignment 2 - my-crud-api/scraper/dashboard-template.html';
+    const dashboardPath = '/Users/moscow/FlyRank/Assignment 2 - my-crud-api/scraper/dashboard.html';
 
+    // Check if template exists
     if (!fs.existsSync(templatePath)) {
-        console.log('⚠️ dashboard-template.html not found, skipping dashboard generation');
+        console.log('⚠️ dashboard-template.html not found, creating from inline template');
+        // Create inline template
+        const inlineTemplate = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Books Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 40px auto; padding: 20px; background: #f5f5f5; }
+        h1 { color: #333; }
+        .stats { display: flex; gap: 20px; flex-wrap: wrap; margin: 20px 0; }
+        .stat { background: white; padding: 20px 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex: 1; min-width: 120px; text-align: center; }
+        .stat .number { font-size: 32px; font-weight: bold; color: #2c3e50; display: block; }
+        .stat .label { color: #7f8c8d; font-size: 14px; }
+        .controls { display: flex; gap: 20px; margin: 20px 0; flex-wrap: wrap; }
+        .controls input, .controls select { padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        th { background: #2c3e50; color: white; padding: 12px; text-align: left; }
+        td { padding: 10px 12px; border-bottom: 1px solid #eee; }
+        tr:hover { background: #f8f9fa; }
+        .low-stock { background: #ffebee; }
+        .high-stock { background: #e8f5e9; }
+        .rating { color: #f39c12; }
+        .last-updated { color: #7f8c8d; font-size: 14px; margin-top: 20px; }
+        .btn { padding: 10px 20px; background: #2196f3; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; }
+        .btn:hover { background: #1976d2; }
+    </style>
+</head>
+<body>
+    <h1>📚 Books Dashboard</h1>
+    <div id="stats" class="stats"></div>
+    <div class="controls">
+        <input type="text" id="search" placeholder="Search by title..." oninput="filterTable()">
+        <select id="ratingFilter" onchange="filterTable()">
+            <option value="">All Ratings</option>
+            <option value="5">5 Stars</option>
+            <option value="4">4 Stars</option>
+            <option value="3">3 Stars</option>
+            <option value="2">2 Stars</option>
+            <option value="1">1 Star</option>
+        </select>
+        <button class="btn" onclick="location.reload()">🔄 Refresh</button>
+    </div>
+    <table>
+        <thead><tr><th>#</th><th>Title</th><th>Price</th><th>Rating</th><th>Stock</th></tr></thead>
+        <tbody id="booksBody"></tbody>
+    </table>
+    <div id="lastUpdated" class="last-updated"></div>
+
+    <script>
+        const books = __DATA_PLACEHOLDER__;
+
+        function renderStats() {
+            const total = books.length;
+            const inStock = books.filter(b => b.availability_count > 0).length;
+            const avgPrice = books.length ? (books.reduce((s, b) => s + (b.price_gbp || 0), 0) / books.length).toFixed(2) : 0;
+            const avgRating = books.length ? (books.reduce((s, b) => s + (b.rating_number || 0), 0) / books.length).toFixed(1) : 0;
+            document.getElementById('stats').innerHTML = \`
+                <div class="stat"><span class="number">\${total}</span><span class="label">Total Books</span></div>
+                <div class="stat"><span class="number">£\${avgPrice}</span><span class="label">Average Price</span></div>
+                <div class="stat"><span class="number">\${avgRating} ⭐</span><span class="label">Average Rating</span></div>
+                <div class="stat"><span class="number">\${inStock}</span><span class="label">In Stock</span></div>
+            \`;
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('booksBody');
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px;">No books match your filters</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.map((b, i) => {
+                let stockClass = '';
+                if (b.availability_count < 5) stockClass = 'low-stock';
+                else if (b.availability_count > 20) stockClass = 'high-stock';
+                const stars = '⭐'.repeat(Math.min(b.rating_number || 0, 5));
+                return \`<tr class="\${stockClass}">
+                    <td>\${i + 1}</td>
+                    <td><a href="\${b.product_url}" target="_blank">\${b.title || 'N/A'}</a></td>
+                    <td>£\${b.price_gbp !== null ? b.price_gbp.toFixed(2) : 'N/A'}</td>
+                    <td class="rating">\${stars}</td>
+                    <td>\${b.availability_count !== null ? b.availability_count : 'N/A'}</td>
+                </tr>\`;
+            }).join('');
+        }
+
+        function filterTable() {
+            const search = document.getElementById('search').value.toLowerCase();
+            const rating = parseInt(document.getElementById('ratingFilter').value) || null;
+            const filtered = books.filter(b => {
+                const matchTitle = b.title && b.title.toLowerCase().includes(search);
+                const matchRating = rating ? b.rating_number === rating : true;
+                return matchTitle && matchRating;
+            });
+            renderTable(filtered);
+        }
+
+        renderStats();
+        renderTable(books);
+        document.getElementById('lastUpdated').textContent = '📅 Last updated: ' + new Date().toLocaleString();
+    </script>
+</body>
+</html>`;
+        let html = inlineTemplate;
+        html = html.replace('__DATA_PLACEHOLDER__', JSON.stringify(books, null, 2));
+        fs.writeFileSync(dashboardPath, html);
+        console.log(`📁 Dashboard auto-generated with ${books.length} books`);
         return;
     }
 
+    // If template exists, use it
     let html = fs.readFileSync(templatePath, 'utf-8');
     const dataScript = `<script>\n    const EMBEDDED_DATA = ${JSON.stringify(books, null, 2)};\n</script>`;
     html = html.replace('<!-- DATA_PLACEHOLDER -->', dataScript);
-
     fs.writeFileSync(dashboardPath, html);
     console.log(`📁 Dashboard auto-generated with ${books.length} books`);
 }
