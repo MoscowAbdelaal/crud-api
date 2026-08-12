@@ -13,7 +13,7 @@ dotenv.config();
 const client = new OpenAI({
     baseURL: process.env.LLM_BASE_URL || 'http://localhost:11434/v1',
     apiKey: process.env.LLM_API_KEY || 'ollama',
-    timeout: 30000, // 30 seconds (Stage 4)
+    timeout: 30000,
 });
 
 // ============================================
@@ -39,28 +39,24 @@ function quarantine(input, rawOutput, error, promptVersion) {
     console.log('🚨 Quarantined:', entry);
 }
 
-// ============================================
-// COST LOGGING (Stage 4)
-// ============================================
 function logCost(promptVersion, model, inputTokens, outputTokens, duration, repairCount) {
     const entry = {
         timestamp: new Date().toISOString(),
         prompt_version: promptVersion,
         model: model,
-        input_tokens: inputTokens,
-        output_tokens: outputTokens,
-        total_tokens: inputTokens + outputTokens,
+        input_tokens: inputTokens || 0,
+        output_tokens: outputTokens || 0,
+        total_tokens: (inputTokens || 0) + (outputTokens || 0),
         duration_ms: duration,
         repair_count: repairCount || 0,
     };
     console.log('💰 COST:', JSON.stringify(entry));
-    // Append to cost log file
     const costLogPath = path.join(LOG_DIR, 'cost.jsonl');
     fs.appendFileSync(costLogPath, JSON.stringify(entry) + '\n');
 }
 
 // ============================================
-// RETRY WITH EXPONENTIAL BACKOFF (Stage 4)
+// RETRY WITH EXPONENTIAL BACKOFF
 // ============================================
 async function callWithRetry(model, messages, maxRetries = 3) {
     let lastError = null;
@@ -76,13 +72,11 @@ async function callWithRetry(model, messages, maxRetries = 3) {
         } catch (error) {
             lastError = error;
             
-            // Don't retry on these errors (Stage 4)
             if (error.status === 400 || error.status === 401 || error.status === 403) {
                 console.log(`❌ Not retrying ${error.status}: ${error.message}`);
                 throw error;
             }
             
-            // Retry on timeouts, 429, 5xx
             if (error.status === 429 || (error.status >= 500 && error.status < 600) || error.code === 'ETIMEDOUT') {
                 if (attempt < maxRetries) {
                     const delay = Math.min(1000 * Math.pow(2, attempt - 1) + Math.random() * 200, 10000);
@@ -132,6 +126,12 @@ function parseAndValidate(raw, input, promptVersion) {
 // ============================================
 async function repairRetry(input, rawOutput, error, promptVersion) {
     console.log('🔧 Attempting repair retry...');
+    
+    let errorMessage = error.message || String(error);
+    if (typeof errorMessage !== 'string') {
+        errorMessage = JSON.stringify(errorMessage);
+    }
+    
     const repairPrompt = `
 You previously returned a response that was rejected.
 
@@ -139,7 +139,7 @@ Your response was:
 ${rawOutput}
 
 The error was:
-${error.message}
+${errorMessage}
 
 Please return ONLY a valid JSON object matching this schema:
 {
@@ -203,7 +203,6 @@ async function classifyHandler(req, res) {
 
         console.log(`📝 Using prompt: ${promptVersion}`);
 
-        // Call with retry (Stage 4)
         const response = await callWithRetry(model, [
             { role: 'system', content: prompt },
             { role: 'user', content: text }
@@ -213,7 +212,6 @@ async function classifyHandler(req, res) {
         const rawContent = response.choices[0].message.content;
         const tokens = response.usage || { prompt_tokens: 0, completion_tokens: 0 };
 
-        // Cost logging (Stage 4)
         logCost(promptVersion, model, tokens.prompt_tokens, tokens.completion_tokens, duration, repairCount);
 
         let validated;
