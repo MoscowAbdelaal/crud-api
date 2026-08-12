@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-08-12T12:21:32.788Z",
+  "timestamp": "2026-08-12T13:29:02.791Z",
   "prompt_version": "classify-v1.md",
-  "model": "llama3.2",
+  "model": "openrouter/free",
   "total": 8,
-  "passed": 7,
-  "failed": 1,
-  "score": "88%",
+  "passed": 6,
+  "failed": 2,
+  "score": "75%",
   "results": [
     {
       "input": "I was charged twice for my subscription this month",
@@ -31,7 +31,7 @@
         "category": "bug",
         "urgency": "normal",
         "confidence": 0.9,
-        "reason": "User reports a crash, likely a bug in the export feature"
+        "reason": "User reports that the export button crashes on each click, indicating a bug."
       },
       "passed": true
     },
@@ -44,8 +44,8 @@
       "actual": {
         "category": "feature",
         "urgency": "low",
-        "confidence": 0.6,
-        "reason": "User requests feature addition, a common request"
+        "confidence": 0.95,
+        "reason": "User requests a new feature (dark mode) for the dashboard"
       },
       "passed": true
     },
@@ -72,8 +72,8 @@
       "actual": {
         "category": "billing",
         "urgency": "high",
-        "confidence": 0.95,
-        "reason": "User reports incorrect invoice amount"
+        "confidence": 0.96,
+        "reason": "User reports incorrect amount on invoice, a clear billing issue"
       },
       "passed": true
     },
@@ -85,11 +85,11 @@
       },
       "actual": {
         "category": "bug",
-        "urgency": "normal",
+        "urgency": "high",
         "confidence": 0.9,
-        "reason": "User reports issue with login page loading on mobile"
+        "reason": "Login page not loading on mobile is a functional defect blocking user access"
       },
-      "passed": true
+      "passed": false
     },
     {
       "input": "I'd like to see a monthly summary report feature",
@@ -98,10 +98,12 @@
         "urgency": "low"
       },
       "actual": {
-        "error": "Model output validation failed after repair",
-        "details": "Repair failed: Invalid JSON: Unexpected non-whitespace character after JSON at position 148 (line 7 column 1)"
+        "category": "feature",
+        "urgency": "low",
+        "confidence": 1,
+        "reason": "User is requesting a new functionality that does not currently exist."
       },
-      "passed": false
+      "passed": true
     },
     {
       "input": "Hello, I need help with something",
@@ -110,12 +112,9 @@
         "urgency": "low"
       },
       "actual": {
-        "category": "other",
-        "urgency": "low",
-        "confidence": 0.3,
-        "reason": "Vague question, could be billing, feature, or general inquiry"
+        "error": "Internal server error"
       },
-      "passed": true
+      "passed": false
     }
   ]
 }
