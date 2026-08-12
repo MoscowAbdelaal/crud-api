@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-12T15:30:44.315Z",
+  "timestamp": "2026-08-12T15:35:56.597Z",
   "prompt_version": "classify-v1.md",
   "model": "llama3.2",
   "total": 8,
@@ -87,7 +87,7 @@
         "category": "bug",
         "urgency": "normal",
         "confidence": 0.9,
-        "reason": "User reports a login issue, likely a bug in the mobile app"
+        "reason": "User reports an issue with the login page not loading on mobile, likely a bug"
       },
       "passed": true
     },
@@ -100,8 +100,8 @@
       "actual": {
         "category": "other",
         "urgency": "low",
-        "confidence": 0.1,
-        "reason": "Unable to classify request"
+        "confidence": 0.2,
+        "reason": "Monthly summary report feature is not implemented yet"
       },
       "passed": false
     },
@@ -115,7 +115,7 @@
         "category": "other",
         "urgency": "low",
         "confidence": 0.3,
-        "reason": "User requests general assistance without specifying a clear issue"
+        "reason": "User's message is vague and could be related to various topics"
       },
       "passed": true
     }

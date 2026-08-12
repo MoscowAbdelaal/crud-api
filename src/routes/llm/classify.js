@@ -211,30 +211,43 @@ Return ONLY the JSON object, nothing else.`;
 // STREAMING SUPPORT (Stretch 7)
 // ============================================
 async function streamResponse(model, messages, res) {
-    const stream = await client.chat.completions.create({
-        model: model,
-        messages: messages,
-        temperature: 0.2,
-        max_tokens: 300,
-        stream: true,
-    });
+    try {
+        const stream = await client.chat.completions.create({
+            model: model,
+            messages: messages,
+            temperature: 0.2,
+            max_tokens: 300,
+            stream: true,
+        });
 
-    let fullContent = '';
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
+        let fullContent = '';
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
 
-    for await (const chunk of stream) {
-        const content = chunk.choices[0]?.delta?.content || '';
-        if (content) {
-            fullContent += content;
-            res.write(`data: ${JSON.stringify({ token: content })}\n\n`);
+        for await (const chunk of stream) {
+            const content = chunk.choices[0]?.delta?.content || '';
+            if (content) {
+                fullContent += content;
+                // Send clean, encoded JSON chunks
+                const cleanChunk = content.replace(/\n/g, ' ').trim();
+                if (cleanChunk) {
+                    res.write(`data: ${JSON.stringify({ token: cleanChunk })}\n\n`);
+                }
+            }
         }
-    }
 
-    res.write(`data: ${JSON.stringify({ done: true, full: fullContent })}\n\n`);
-    res.end();
-    return fullContent;
+        // Send the complete response at the end
+        const cleanFull = fullContent.replace(/\n/g, ' ').trim();
+        res.write(`data: ${JSON.stringify({ done: true, full: cleanFull })}\n\n`);
+        res.end();
+        return fullContent;
+    } catch (error) {
+        console.error('Streaming error:', error.message);
+        res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+        res.end();
+        throw error;
+    }
 }
 
 // ============================================
@@ -243,8 +256,6 @@ async function streamResponse(model, messages, res) {
 async function classifyHandler(req, res) {
     const startTime = Date.now();
     let repairCount = 0;
-    
-    // Safely check if streaming is requested (works in both eval and real requests)
     const isStreaming = req.query && req.query.stream === 'true';
     
     try {
@@ -275,14 +286,12 @@ async function classifyHandler(req, res) {
 
         console.log(`📝 Using prompt: ${promptVersion}`);
 
-        // Check cache first
         const cachedResponse = cache.get(text, promptVersion);
         if (cachedResponse) {
             console.log('📦 Returning cached response (cache hit)');
             return res.status(200).json(cachedResponse);
         }
 
-        // If streaming is requested
         if (isStreaming) {
             console.log('🌊 Streaming response...');
             const messages = [
@@ -293,7 +302,6 @@ async function classifyHandler(req, res) {
             return;
         }
 
-        // Non-streaming path
         const response = await callWithRetry(model, [
             { role: 'system', content: prompt },
             { role: 'user', content: text }
