@@ -8,11 +8,12 @@ const path = require('path');
 dotenv.config();
 
 // ============================================
-// LLM CLIENT
+// LLM CLIENT WITH TIMEOUT
 // ============================================
 const client = new OpenAI({
     baseURL: process.env.LLM_BASE_URL || 'http://localhost:11434/v1',
     apiKey: process.env.LLM_API_KEY || 'ollama',
+    timeout: 30000, // 30 seconds (Stage 4)
 });
 
 // ============================================
@@ -39,32 +40,82 @@ function quarantine(input, rawOutput, error, promptVersion) {
 }
 
 // ============================================
+// COST LOGGING (Stage 4)
+// ============================================
+function logCost(promptVersion, model, inputTokens, outputTokens, duration, repairCount) {
+    const entry = {
+        timestamp: new Date().toISOString(),
+        prompt_version: promptVersion,
+        model: model,
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        total_tokens: inputTokens + outputTokens,
+        duration_ms: duration,
+        repair_count: repairCount || 0,
+    };
+    console.log('💰 COST:', JSON.stringify(entry));
+    // Append to cost log file
+    const costLogPath = path.join(LOG_DIR, 'cost.jsonl');
+    fs.appendFileSync(costLogPath, JSON.stringify(entry) + '\n');
+}
+
+// ============================================
+// RETRY WITH EXPONENTIAL BACKOFF (Stage 4)
+// ============================================
+async function callWithRetry(model, messages, maxRetries = 3) {
+    let lastError = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            return await client.chat.completions.create({
+                model: model,
+                messages: messages,
+                temperature: 0.2,
+                max_tokens: 300,
+            });
+        } catch (error) {
+            lastError = error;
+            
+            // Don't retry on these errors (Stage 4)
+            if (error.status === 400 || error.status === 401 || error.status === 403) {
+                console.log(`❌ Not retrying ${error.status}: ${error.message}`);
+                throw error;
+            }
+            
+            // Retry on timeouts, 429, 5xx
+            if (error.status === 429 || (error.status >= 500 && error.status < 600) || error.code === 'ETIMEDOUT') {
+                if (attempt < maxRetries) {
+                    const delay = Math.min(1000 * Math.pow(2, attempt - 1) + Math.random() * 200, 10000);
+                    console.log(`⏳ Retry ${attempt}/${maxRetries} after ${Math.round(delay)}ms`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    continue;
+                }
+            }
+            
+            throw error;
+        }
+    }
+    
+    throw lastError;
+}
+
+// ============================================
 // PARSE AND VALIDATE MODEL OUTPUT
 // ============================================
 function parseAndValidate(raw, input, promptVersion) {
-    // 1. Try to extract JSON from the response
     let jsonStr = raw;
-    
-    // Remove markdown code fences
     jsonStr = jsonStr.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-    
-    // Find the first JSON object
     const match = jsonStr.match(/\{[\s\S]*\}/);
     if (!match) {
         throw new Error('No JSON object found in response');
     }
-    
     jsonStr = match[0];
-    
-    // 2. Parse JSON
     let parsed;
     try {
         parsed = JSON.parse(jsonStr);
     } catch (error) {
         throw new Error(`Invalid JSON: ${error.message}`);
     }
-    
-    // 3. Validate against schema
     const result = OutputSchema.safeParse(parsed);
     if (!result.success) {
         const errors = result.error.errors.map(e => ({
@@ -73,7 +124,6 @@ function parseAndValidate(raw, input, promptVersion) {
         }));
         throw new Error(`Validation failed: ${JSON.stringify(errors)}`);
     }
-    
     return result.data;
 }
 
@@ -82,7 +132,6 @@ function parseAndValidate(raw, input, promptVersion) {
 // ============================================
 async function repairRetry(input, rawOutput, error, promptVersion) {
     console.log('🔧 Attempting repair retry...');
-    
     const repairPrompt = `
 You previously returned a response that was rejected.
 
@@ -103,18 +152,15 @@ Please return ONLY a valid JSON object matching this schema:
 Return ONLY the JSON object, nothing else.`;
 
     try {
-        const response = await client.chat.completions.create({
-            model: process.env.LLM_MODEL || 'llama3.2',
-            messages: [
+        const response = await callWithRetry(
+            process.env.LLM_MODEL || 'llama3.2',
+            [
                 { role: 'system', content: getPrompt('classify-v1.md') },
                 { role: 'user', content: input },
                 { role: 'assistant', content: rawOutput },
                 { role: 'user', content: repairPrompt }
-            ],
-            temperature: 0.2,
-            max_tokens: 300,
-        });
-
+            ]
+        );
         const repaired = response.choices[0].message.content;
         return parseAndValidate(repaired, input, promptVersion);
     } catch (error) {
@@ -127,9 +173,9 @@ Return ONLY the JSON object, nothing else.`;
 // ============================================
 async function classifyHandler(req, res) {
     const startTime = Date.now();
+    let repairCount = 0;
     
     try {
-        // 1. Validate input
         const validation = validateInput(req.body);
         if (!validation.valid) {
             return res.status(400).json({
@@ -140,12 +186,10 @@ async function classifyHandler(req, res) {
         
         const { text } = validation.data;
 
-        // 2. Check stub mode
         if (process.env.LLM_STUB === '1') {
             return res.status(200).json(stubResponse);
         }
 
-        // 3. Check kill switch
         if (process.env.LLM_ENABLED === 'false') {
             return res.status(503).json({
                 error: 'LLM service is currently disabled',
@@ -153,42 +197,35 @@ async function classifyHandler(req, res) {
             });
         }
 
-        // 4. Load the prompt
         const prompt = getPrompt('classify-v1.md');
         const promptVersion = getPromptVersion();
+        const model = process.env.LLM_MODEL || 'llama3.2';
 
         console.log(`📝 Using prompt: ${promptVersion}`);
 
-        // 5. Call the model
-        const response = await client.chat.completions.create({
-            model: process.env.LLM_MODEL || 'llama3.2',
-            messages: [
-                { role: 'system', content: prompt },
-                { role: 'user', content: text }
-            ],
-            temperature: 0.2,
-            max_tokens: 300,
-        });
+        // Call with retry (Stage 4)
+        const response = await callWithRetry(model, [
+            { role: 'system', content: prompt },
+            { role: 'user', content: text }
+        ]);
 
         const duration = Date.now() - startTime;
         const rawContent = response.choices[0].message.content;
         const tokens = response.usage || { prompt_tokens: 0, completion_tokens: 0 };
 
-        console.log(`📊 LLM Call: ${duration}ms | Tokens: ${tokens.prompt_tokens + tokens.completion_tokens}`);
+        // Cost logging (Stage 4)
+        logCost(promptVersion, model, tokens.prompt_tokens, tokens.completion_tokens, duration, repairCount);
 
-        // 6. Parse and validate
         let validated;
         try {
             validated = parseAndValidate(rawContent, text, promptVersion);
         } catch (parseError) {
             console.log(`⚠️ Parse/validation failed: ${parseError.message}`);
-            
-            // 7. Repair retry (ONCE)
             try {
                 validated = await repairRetry(text, rawContent, parseError, promptVersion);
+                repairCount = 1;
                 console.log('✅ Repair retry succeeded');
             } catch (repairError) {
-                // 8. Quarantine and return 422
                 quarantine(text, rawContent, repairError, promptVersion);
                 return res.status(422).json({
                     error: 'Model output validation failed after repair',
@@ -197,7 +234,6 @@ async function classifyHandler(req, res) {
             }
         }
 
-        // 9. Return clean JSON (no raw model text)
         return res.status(200).json(validated);
 
     } catch (error) {
