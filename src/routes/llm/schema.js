@@ -35,31 +35,26 @@ const stubResponse = {
 function validateInput(body) {
     const errors = [];
     
-    // Check if body exists
     if (!body || typeof body !== 'object') {
         errors.push({ field: 'body', message: 'Request body is required' });
         return { valid: false, errors };
     }
     
-    // Check if text field exists
     if (body.text === undefined || body.text === null) {
         errors.push({ field: 'text', message: 'Text is required' });
         return { valid: false, errors };
     }
     
-    // Check if text is a string
     if (typeof body.text !== 'string') {
         errors.push({ field: 'text', message: 'Text must be a string' });
         return { valid: false, errors };
     }
     
-    // Check if text is empty
     if (body.text.trim() === '') {
         errors.push({ field: 'text', message: 'Text is required' });
         return { valid: false, errors };
     }
     
-    // Check max length
     if (body.text.length > 2000) {
         errors.push({ field: 'text', message: 'Text must be 2000 characters or less' });
         return { valid: false, errors };

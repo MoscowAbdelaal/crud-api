@@ -5,34 +5,31 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "ollama": "ollama serve",
+    "dev:all": "concurrently \"npm run ollama\" \"npm run dev\"",
     "test": "node tests/test-api.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.1",
     "better-sqlite3": "^13.0.3",
+    "csv-writer": "^1.6.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "openai": "^7.4.0",
+    "openai": "^4.0.0",
     "pg": "^8.22.0",
     "swagger-ui-express": "^5.0.1",
     "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.4",
+    "nodemon": "^3.0.0"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/MoscowAbdelaal/crud-api.git"
   },
-  "keywords": [
-    "crud",
-    "api",
-    "express",
-    "sqlite",
-    "postgresql",
-    "docker",
-    "supabase",
-    "auth",
-    "jwt"
-  ],
+  "keywords": [],
   "author": "Moscow Abdelaal",
   "license": "ISC",
   "type": "commonjs",
