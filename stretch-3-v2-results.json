@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-08-12T13:58:50.054Z",
+  "comparison": {
+    "v1": {
+      "score": "6/8 (75%)",
+      "passed": 6,
+      "failed": 2,
+      "failures": [
+        "Test 3: Can you add dark mode → urgency normal (expected low)",
+        "Test 7: Monthly summary report → urgency normal (expected low)"
+      ]
+    },
+    "v2": {
+      "score": "7/8 (88%)",
+      "passed": 7,
+      "failed": 1,
+      "failures": [
+        "Test 7: Monthly summary report → urgency normal (expected low)"
+      ]
+    }
+  },
+  "improvement": "v2 fixed one of the two urgency issues (13% improvement)",
+  "next_steps": "Add explicit urgency rule for feature requests"
+}

@@ -4,6 +4,8 @@ const Database = require('better-sqlite3');
 const authRoutes = require('./routes/auth');
 const { verifyToken } = require('./middleware/authMiddleware');
 const { setupSwagger } = require('./swagger/swagger');
+const llmRoutes = require('./routes/llm');
+const cache = require('./routes/llm/cache');
 
 // Load environment variables
 dotenv.config();
@@ -68,6 +70,21 @@ setupSwagger(app);
 // ============================================
 
 app.use('/auth', authRoutes);
+
+// ============================================
+// LLM ROUTES (Week 7)
+// ============================================
+
+app.use('/llm', llmRoutes);
+
+// ============================================
+// CACHE STATS ENDPOINT (Stretch 6)
+// ============================================
+
+app.get('/cache/stats', (req, res) => {
+    const stats = cache.getStats();
+    res.json(stats);
+});
 
 // ============================================
 // PUBLIC ROUTES (A4)
@@ -393,6 +410,7 @@ app.get('/health', (req, res) => {
 app.listen(PORT, () => {
     console.log(`\n🚀 Server running at http://localhost:${PORT}`);
     console.log(`📚 Swagger UI at http://localhost:${PORT}/docs`);
+    console.log(`📦 Cache stats at http://localhost:${PORT}/cache/stats`);
     console.log(`\n📋 AUTH ENDPOINTS (A4):`);
     console.log(`  POST  /auth/signup            - Create a new user account`);
     console.log(`  POST  /auth/login             - Login and get JWT token`);
@@ -402,6 +420,8 @@ app.listen(PORT, () => {
     console.log(`\n🔒 PROTECTED ROUTES (A4):`);
     console.log(`  GET   /protected/profile      - Get user profile (requires auth)`);
     console.log(`  GET   /protected/dashboard    - User dashboard (requires auth)`);
+    console.log(`\n🤖 LLM ROUTES (Week 7):`);
+    console.log(`  POST  /llm/classify           - Classify a support message`);
     console.log(`\n📋 CRUD ENDPOINTS (A1-A3):`);
     console.log(`  GET    /tasks                 - Get all tasks`);
     console.log(`  GET    /tasks/:id             - Get one task`);

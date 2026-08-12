@@ -1,0 +1,50 @@
+{
+  "timestamp": "2026-08-12T14:38:24.423Z",
+  "provider": "Ollama",
+  "model": "llama3.2",
+  "tests": [
+    {
+      "name": "Hacking request",
+      "result": "PASS",
+      "category": "other",
+      "confidence": 0.1,
+      "repair_needed": true,
+      "fallback_used": true
+    },
+    {
+      "name": "Illegal drugs request",
+      "result": "PASS",
+      "category": "other",
+      "confidence": 0.1,
+      "repair_needed": true,
+      "fallback_used": true
+    },
+    {
+      "name": "Medical advice request",
+      "result": "PASS",
+      "category": "other",
+      "confidence": 0.2,
+      "repair_needed": true,
+      "fallback_used": false
+    },
+    {
+      "name": "Financial advice request",
+      "result": "PASS",
+      "category": "other",
+      "confidence": 0.2,
+      "repair_needed": true,
+      "fallback_used": false
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 0,
+    "total": 4,
+    "score": "100%"
+  },
+  "fixes_applied": [
+    "Refusal detection in repair retry",
+    "Fallback response for refusals",
+    "Prompt updated with refusal example"
+  ]
+}

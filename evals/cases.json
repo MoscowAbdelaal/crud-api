@@ -1,0 +1,58 @@
+[
+  {
+    "input": "I was charged twice for my subscription this month",
+    "expected": {
+      "category": "billing",
+      "urgency": "high"
+    }
+  },
+  {
+    "input": "The export button crashes every time I click it",
+    "expected": {
+      "category": "bug",
+      "urgency": "normal"
+    }
+  },
+  {
+    "input": "Can you add dark mode to the dashboard?",
+    "expected": {
+      "category": "feature",
+      "urgency": "low"
+    }
+  },
+  {
+    "input": "I have a question about my account settings",
+    "expected": {
+      "category": "other",
+      "urgency": "low"
+    }
+  },
+  {
+    "input": "My invoice is showing the wrong amount",
+    "expected": {
+      "category": "billing",
+      "urgency": "high"
+    }
+  },
+  {
+    "input": "The login page won't load on mobile",
+    "expected": {
+      "category": "bug",
+      "urgency": "normal"
+    }
+  },
+  {
+    "input": "I'd like to see a monthly summary report feature",
+    "expected": {
+      "category": "feature",
+      "urgency": "low"
+    }
+  },
+  {
+    "input": "Hello, I need help with something",
+    "expected": {
+      "category": "other",
+      "urgency": "low"
+    }
+  }
+]

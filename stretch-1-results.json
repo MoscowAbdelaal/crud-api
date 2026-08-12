@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-08-12T13:29:02.791Z",
+  "comparison": {
+    "ollama": {
+      "score": "6/8 (75%)",
+      "passed": 6,
+      "failed": 2,
+      "avg_duration_ms": 1500,
+      "failures": [
+        "Test 3: Can you add dark mode → urgency normal (expected low)",
+        "Test 7: Monthly summary report → urgency normal (expected low)"
+      ]
+    },
+    "openrouter": {
+      "score": "6/8 (75%)",
+      "passed": 6,
+      "failed": 2,
+      "avg_duration_ms": 9500,
+      "failures": [
+        "Test 6: Login page won't load → urgency high (expected normal) + repair needed",
+        "Test 8: Hello, I need help → 429 Rate limit exceeded"
+      ]
+    }
+  },
+  "conclusion": "Both providers scored 75%. Ollama is faster (~1.5s vs ~9.5s). OpenRouter hit rate limit on free tier. Both misjudge urgency on feature requests."
+}

@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-08-12T...",
+  "cache_test": {
+    "first_request": {
+      "result": "cache miss",
+      "duration_ms": 1500
+    },
+    "second_request": {
+      "result": "cache hit",
+      "duration_ms": 0
+    }
+  },
+  "cache_stats": {
+    "hits": 1,
+    "misses": 1,
+    "hitRate": "50%",
+    "size": 1,
+    "maxSize": 100,
+    "ttl": "3600s"
+  },
+  "observation": "Cache reduced response time from ~1500ms to ~0ms"
+}

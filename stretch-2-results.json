@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-08-12T...",
+  "race_results": {
+    "ollama": {
+      "score": "6/6 (100%)",
+      "avg_duration_ms": 1300,
+      "status": "All tests passed"
+    },
+    "openrouter": {
+      "score": "0/6 (0%)",
+      "avg_duration_ms": 9500,
+      "status": "Rate limited (429)"
+    }
+  },
+  "conclusion": "Ollama wins on speed, reliability, and no rate limits."
+}
