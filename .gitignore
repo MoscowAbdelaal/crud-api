@@ -15,3 +15,6 @@ node_modules/
 
 # Docker
 *.pid
+# LLM logs
+logs/
+*.log
