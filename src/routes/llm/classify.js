@@ -128,7 +128,6 @@ function parseAndValidate(raw, input, promptVersion) {
 async function repairRetry(input, rawOutput, error, promptVersion) {
     console.log('🔧 Attempting repair retry...');
     
-    // Check if the model refused (common refusal patterns)
     const refusalPatterns = [
         "I can't assist",
         "I cannot provide",
@@ -209,11 +208,42 @@ Return ONLY the JSON object, nothing else.`;
 }
 
 // ============================================
+// STREAMING SUPPORT (Stretch 7)
+// ============================================
+async function streamResponse(model, messages, res) {
+    const stream = await client.chat.completions.create({
+        model: model,
+        messages: messages,
+        temperature: 0.2,
+        max_tokens: 300,
+        stream: true,
+    });
+
+    let fullContent = '';
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || '';
+        if (content) {
+            fullContent += content;
+            res.write(`data: ${JSON.stringify({ token: content })}\n\n`);
+        }
+    }
+
+    res.write(`data: ${JSON.stringify({ done: true, full: fullContent })}\n\n`);
+    res.end();
+    return fullContent;
+}
+
+// ============================================
 // CLASSIFY ENDPOINT HANDLER
 // ============================================
 async function classifyHandler(req, res) {
     const startTime = Date.now();
     let repairCount = 0;
+    const isStreaming = req.query.stream === 'true';
     
     try {
         const validation = validateInput(req.body);
@@ -243,15 +273,25 @@ async function classifyHandler(req, res) {
 
         console.log(`📝 Using prompt: ${promptVersion}`);
 
-        // ============================================
-        // CHECK CACHE FIRST (Stretch 6)
-        // ============================================
+        // Check cache first
         const cachedResponse = cache.get(text, promptVersion);
         if (cachedResponse) {
             console.log('📦 Returning cached response (cache hit)');
             return res.status(200).json(cachedResponse);
         }
 
+        // If streaming is requested
+        if (isStreaming) {
+            console.log('🌊 Streaming response...');
+            const messages = [
+                { role: 'system', content: prompt },
+                { role: 'user', content: text }
+            ];
+            await streamResponse(model, messages, res);
+            return;
+        }
+
+        // Non-streaming path
         const response = await callWithRetry(model, [
             { role: 'system', content: prompt },
             { role: 'user', content: text }
@@ -281,11 +321,7 @@ async function classifyHandler(req, res) {
             }
         }
 
-        // ============================================
-        // SAVE TO CACHE (Stretch 6)
-        // ============================================
         cache.set(text, promptVersion, validated);
-
         return res.status(200).json(validated);
 
     } catch (error) {
