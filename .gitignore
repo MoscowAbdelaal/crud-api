@@ -17,4 +17,4 @@ node_modules/
 *.pid
 # LLM logs
 logs/
-*.log
+*.log.env.test
