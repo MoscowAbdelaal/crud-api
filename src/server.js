@@ -5,6 +5,7 @@ const authRoutes = require('./routes/auth');
 const { verifyToken } = require('./middleware/authMiddleware');
 const { setupSwagger } = require('./swagger/swagger');
 const llmRoutes = require('./routes/llm');
+const cache = require('./routes/llm/cache');
 
 // Load environment variables
 dotenv.config();
@@ -75,6 +76,15 @@ app.use('/auth', authRoutes);
 // ============================================
 
 app.use('/llm', llmRoutes);
+
+// ============================================
+// CACHE STATS ENDPOINT (Stretch 6)
+// ============================================
+
+app.get('/cache/stats', (req, res) => {
+    const stats = cache.getStats();
+    res.json(stats);
+});
 
 // ============================================
 // PUBLIC ROUTES (A4)
@@ -400,6 +410,7 @@ app.get('/health', (req, res) => {
 app.listen(PORT, () => {
     console.log(`\n🚀 Server running at http://localhost:${PORT}`);
     console.log(`📚 Swagger UI at http://localhost:${PORT}/docs`);
+    console.log(`📦 Cache stats at http://localhost:${PORT}/cache/stats`);
     console.log(`\n📋 AUTH ENDPOINTS (A4):`);
     console.log(`  POST  /auth/signup            - Create a new user account`);
     console.log(`  POST  /auth/login             - Login and get JWT token`);

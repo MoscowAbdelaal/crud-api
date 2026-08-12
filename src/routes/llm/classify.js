@@ -1,5 +1,6 @@
 const { InputSchema, OutputSchema, stubResponse, validateInput } = require('./schema');
 const { getPrompt, getPromptVersion } = require('./prompt-loader');
+const cache = require('./cache');
 const OpenAI = require('openai');
 const dotenv = require('dotenv');
 const fs = require('fs');
@@ -122,7 +123,7 @@ function parseAndValidate(raw, input, promptVersion) {
 }
 
 // ============================================
-// REPAIR RETRY - IMPROVED FOR REFUSALS
+// REPAIR RETRY
 // ============================================
 async function repairRetry(input, rawOutput, error, promptVersion) {
     console.log('🔧 Attempting repair retry...');
@@ -197,7 +198,6 @@ Return ONLY the JSON object, nothing else.`;
         const repaired = response.choices[0].message.content;
         return parseAndValidate(repaired, input, promptVersion);
     } catch (error) {
-        // If repair also fails, return a fallback
         console.log('⚠️ Repair failed, using fallback response');
         return {
             category: 'other',
@@ -243,6 +243,15 @@ async function classifyHandler(req, res) {
 
         console.log(`📝 Using prompt: ${promptVersion}`);
 
+        // ============================================
+        // CHECK CACHE FIRST (Stretch 6)
+        // ============================================
+        const cachedResponse = cache.get(text, promptVersion);
+        if (cachedResponse) {
+            console.log('📦 Returning cached response (cache hit)');
+            return res.status(200).json(cachedResponse);
+        }
+
         const response = await callWithRetry(model, [
             { role: 'system', content: prompt },
             { role: 'user', content: text }
@@ -271,6 +280,11 @@ async function classifyHandler(req, res) {
                 });
             }
         }
+
+        // ============================================
+        // SAVE TO CACHE (Stretch 6)
+        // ============================================
+        cache.set(text, promptVersion, validated);
 
         return res.status(200).json(validated);
 
