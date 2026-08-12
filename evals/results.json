@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-08-12T13:58:50.054Z",
-  "prompt_version": "classify-v2.md",
+  "timestamp": "2026-08-12T15:30:44.315Z",
+  "prompt_version": "classify-v1.md",
   "model": "llama3.2",
   "total": 8,
-  "passed": 7,
-  "failed": 1,
-  "score": "88%",
+  "passed": 6,
+  "failed": 2,
+  "score": "75%",
   "results": [
     {
       "input": "I was charged twice for my subscription this month",
@@ -43,11 +43,11 @@
       },
       "actual": {
         "category": "feature",
-        "urgency": "low",
+        "urgency": "normal",
         "confidence": 0.8,
         "reason": "User requests feature addition"
       },
-      "passed": true
+      "passed": false
     },
     {
       "input": "I have a question about my account settings",
@@ -73,7 +73,7 @@
         "category": "billing",
         "urgency": "high",
         "confidence": 0.95,
-        "reason": "User reports incorrect invoice amount"
+        "reason": "User reports incorrect invoice amount, clearly a billing issue"
       },
       "passed": true
     },
@@ -87,7 +87,7 @@
         "category": "bug",
         "urgency": "normal",
         "confidence": 0.9,
-        "reason": "User reports issue with login page loading on mobile, likely a bug"
+        "reason": "User reports a login issue, likely a bug in the mobile app"
       },
       "passed": true
     },
@@ -98,10 +98,10 @@
         "urgency": "low"
       },
       "actual": {
-        "category": "feature",
-        "urgency": "normal",
-        "confidence": 0.8,
-        "reason": "User requests a new feature: monthly summary report"
+        "category": "other",
+        "urgency": "low",
+        "confidence": 0.1,
+        "reason": "Unable to classify request"
       },
       "passed": false
     },
@@ -115,7 +115,7 @@
         "category": "other",
         "urgency": "low",
         "confidence": 0.3,
-        "reason": "Vague question, could be billing, feature, or general inquiry"
+        "reason": "User requests general assistance without specifying a clear issue"
       },
       "passed": true
     }

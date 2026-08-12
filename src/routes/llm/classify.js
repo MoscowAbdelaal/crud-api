@@ -243,7 +243,9 @@ async function streamResponse(model, messages, res) {
 async function classifyHandler(req, res) {
     const startTime = Date.now();
     let repairCount = 0;
-    const isStreaming = req.query.stream === 'true';
+    
+    // Safely check if streaming is requested (works in both eval and real requests)
+    const isStreaming = req.query && req.query.stream === 'true';
     
     try {
         const validation = validateInput(req.body);
