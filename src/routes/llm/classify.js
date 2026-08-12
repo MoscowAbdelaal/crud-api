@@ -122,10 +122,40 @@ function parseAndValidate(raw, input, promptVersion) {
 }
 
 // ============================================
-// REPAIR RETRY
+// REPAIR RETRY - IMPROVED FOR REFUSALS
 // ============================================
 async function repairRetry(input, rawOutput, error, promptVersion) {
     console.log('🔧 Attempting repair retry...');
+    
+    // Check if the model refused (common refusal patterns)
+    const refusalPatterns = [
+        "I can't assist",
+        "I cannot provide",
+        "I'm not able to",
+        "I don't have",
+        "Can I help you with something else",
+        "I can't help",
+        "I cannot help",
+        "not within my scope",
+        "outside my capabilities",
+        "I'm sorry, I can't",
+        "I cannot fulfill",
+        "unable to assist"
+    ];
+    
+    const isRefusal = refusalPatterns.some(pattern => 
+        rawOutput.toLowerCase().includes(pattern.toLowerCase())
+    );
+    
+    if (isRefusal) {
+        console.log('⚠️ Detected refusal pattern, returning fallback response');
+        return {
+            category: 'other',
+            urgency: 'low',
+            confidence: 0.1,
+            reason: 'Request was outside the scope of support classification'
+        };
+    }
     
     let errorMessage = error.message || String(error);
     if (typeof errorMessage !== 'string') {
@@ -149,6 +179,9 @@ Please return ONLY a valid JSON object matching this schema:
   "reason": "one short sentence"
 }
 
+IMPORTANT: Do not refuse with a text message. Always return the JSON object.
+If the request is harmful or outside your scope, use category "other" with confidence below 0.3.
+
 Return ONLY the JSON object, nothing else.`;
 
     try {
@@ -164,7 +197,14 @@ Return ONLY the JSON object, nothing else.`;
         const repaired = response.choices[0].message.content;
         return parseAndValidate(repaired, input, promptVersion);
     } catch (error) {
-        throw new Error(`Repair failed: ${error.message}`);
+        // If repair also fails, return a fallback
+        console.log('⚠️ Repair failed, using fallback response');
+        return {
+            category: 'other',
+            urgency: 'low',
+            confidence: 0.1,
+            reason: 'Unable to classify request'
+        };
     }
 }
 
