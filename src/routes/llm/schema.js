@@ -30,7 +30,7 @@ const stubResponse = {
 };
 
 // ============================================
-// VALIDATE INPUT MANUALLY (fallback)
+// VALIDATE INPUT MANUALLY
 // ============================================
 function validateInput(body) {
     const errors = [];
